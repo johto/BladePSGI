@@ -133,7 +133,8 @@ public:
 		const char *psgi_application_path,
 		int nworkers,
 		const char *application_loader,
-		const char *fastcgi_socket_path
+		const char *fastcgi_socket_path,
+		const char *process_title_prefix
 	);
 
 	int Run();
@@ -195,6 +196,7 @@ private:
 	int			nworkers_;
 	const char *application_loader_;
 	const char *fastcgi_socket_path_;
+	const char *process_title_prefix_;
 
 	pid_t	runner_pid_;
 	pid_t	monitoring_process_pid_;

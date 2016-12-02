@@ -134,7 +134,8 @@ BPSGIMainApplication::BPSGIMainApplication(
 	const char *psgi_application_path,
 	int nworkers,
 	const char *application_loader,
-	const char *fastcgi_socket_path
+	const char *fastcgi_socket_path,
+	const char *opt_process_title_prefix
 )
 	: argc_(argc),
 	  argv_(argv),
@@ -142,6 +143,7 @@ BPSGIMainApplication::BPSGIMainApplication(
 	  nworkers_(nworkers),
 	  application_loader_(application_loader),
 	  fastcgi_socket_path_(fastcgi_socket_path),
+	  process_title_prefix_(opt_process_title_prefix),
 	  runner_pid_(-1),
 	  monitoring_process_pid_(-1),
 	  fastcgi_sockfd_(-1)
@@ -268,8 +270,7 @@ BPSGIMainApplication::UnblockSignals()
 void
 BPSGIMainApplication::SetProcessTitle(const char *value)
 {
-	// TODO: configure from getopt
-	std::string prefix = "api";
+	auto prefix = std::string(process_title_prefix_);
 
 #ifdef __linux__
 	size_t maxlen = 16;
@@ -655,6 +656,7 @@ print_usage(FILE *fh, const char *argv0)
 	fprintf(fh, "\n");
 	fprintf(fh, "Options\n");
 	fprintf(fh, "  --loader=LOADER              uses the Perl module LOADER as a loader\n");
+	fprintf(fh, "  --proctitle-prefix=PREFIX    sets the prefix used for process titles\n");
 	fprintf(fh, "\n");
 }
 
@@ -665,6 +667,7 @@ main(int argc, char *argv[])
 		{"help", no_argument, NULL, '?'},
 		{"version", no_argument, NULL, 'v'},
 		{"loader", required_argument, NULL, 'l'},
+		{"proctitle-prefix", required_argument, NULL, 'p'},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -685,10 +688,11 @@ main(int argc, char *argv[])
 		}
 	}
 
-	char *opt_application_loader = NULL;
+	const char *opt_application_loader = NULL;
+	const char *opt_process_title_prefix = "Blade";
 
 	int c, option_index;
-	while ((c = getopt_long(argc, argv, "l:hv",
+	while ((c = getopt_long(argc, argv, "l:p:hv",
 							long_options, &option_index)) != -1)
 	{
 		switch (c)
@@ -698,6 +702,9 @@ main(int argc, char *argv[])
 				exit(0);
 			case 'l':
 				opt_application_loader = strdup(optarg);
+				break;
+			case 'p':
+				opt_process_title_prefix = strdup(optarg);
 				break;
 			default:
 				/*
@@ -745,7 +752,8 @@ main(int argc, char *argv[])
 		psgi_application_path,
 		nworkers,
 		opt_application_loader,
-		fastcgi_socket_path
+		fastcgi_socket_path,
+		opt_process_title_prefix
 	);
 
 	int ret;
