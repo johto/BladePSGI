@@ -1,0 +1,15 @@
+TYPEMAP
+BPSGI_Context * T_PTROBJ_SPECIAL
+
+INPUT
+T_PTROBJ_SPECIAL
+	if (!sv_derived_from($arg, \"BPSGI::Context\"))
+		croak(\"$var is not of type BPSGI::Context\");
+
+	IV tmp = SvIV((SV*)SvRV($arg));
+	$var = INT2PTR($type, tmp);
+
+OUTPUT
+T_PTROBJ_SPECIAL
+	sv_setref_pv($arg, \"BPSGI::Context\",
+				 (void *) $var);

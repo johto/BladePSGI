@@ -1,0 +1,8 @@
+*.swp
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/Makefile
+/src/perl/XS.c
+/libbladepsgi_perl.a
+/bladepsgi
