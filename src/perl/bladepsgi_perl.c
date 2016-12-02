@@ -27,7 +27,7 @@ bladepsgi_perl_per_process_init(void)
 static PerlInterpreter *my_perl = NULL;
 
 EXTERN_C void boot_DynaLoader(pTHX_ CV *cv);
-EXTERN_C void boot_BLADEPSGI(pTHX_ CV *cv);
+EXTERN_C void boot_BPSGI(pTHX_ CV *cv);
 
 static void
 bladepsgi_perl_xs_init(pTHX)
@@ -36,7 +36,7 @@ bladepsgi_perl_xs_init(pTHX)
 	dXSUB_SYS;
 
 	newXS("DynaLoader::boot_DynaLoader", boot_DynaLoader, file);
-	newXS("BLADEPSGI::bootstrap", boot_BLADEPSGI, file);
+	newXS("BPSGI::bootstrap", boot_BPSGI, file);
 }
 
 int
@@ -77,7 +77,7 @@ bladepsgi_perl_interpreter_init(char **error_out)
 		*error_out = buf;
 		return -1;
 	}
-	eval_pv("BLADEPSGI::bootstrap", 1);
+	eval_pv("BPSGI::bootstrap", 1);
 	if (SvTRUE(ERRSV))
 	{
 		const char *msg = SvPV_nolen(ERRSV);
@@ -130,9 +130,9 @@ bladepsgi_psgi_application_init(const char *path, char **error_out)
 		return -1;
 	}
 	//SV *input_stream = newSViv(0);
-	//BLADEPSGI_InputStream is;
+	//BPSGI_InputStream is;
 	//is.foo = 10;
-	//input_stream = sv_setref_pv(input_stream, "BLADEPSGI::InputStream", &is);
+	//input_stream = sv_setref_pv(input_stream, "BPSGI::InputStream", &is);
 	{
 		dSP;
 		ENTER;
@@ -251,7 +251,7 @@ bladepsgi_perl_callback_call(struct bladepsgi_perl_callback_t *cbs, char **error
 		SAVETMPS;
 		PUSHMARK(sp);
 		ctxsv = newSViv(0);
-		ctxsv = sv_setref_pv(ctxsv, "BLADEPSGI::Context", cbs->bladepsgictx);
+		ctxsv = sv_setref_pv(ctxsv, "BPSGI::Context", cbs->bladepsgictx);
 		mXPUSHs(ctxsv);
 		PUTBACK;
 		perl_call_sv(callback, G_SCALAR | G_EVAL | G_DISCARD);
@@ -282,7 +282,7 @@ bladepsgi_perl_callback_call_and_receive_callback(struct bladepsgi_perl_callback
 		SAVETMPS;
 		PUSHMARK(sp);
 		ctxsv = newSViv(0);
-		ctxsv = sv_setref_pv(ctxsv, "BLADEPSGI::Context", cbs->bladepsgictx);
+		ctxsv = sv_setref_pv(ctxsv, "BPSGI::Context", cbs->bladepsgictx);
 		mXPUSHs(ctxsv);
 		PUTBACK;
 		perl_call_sv(callback, G_SCALAR | G_EVAL);

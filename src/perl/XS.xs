@@ -4,7 +4,7 @@
 
 #include "XS.h"
 
-MODULE = BLADEPSGI PACKAGE=BLADEPSGI::Context PREFIX = bladepsgi_context_
+MODULE = BPSGI PACKAGE=BPSGI::Context PREFIX = bladepsgi_context_
 PROTOTYPES: DISABLE
 
 void
@@ -13,7 +13,7 @@ bladepsgi_context_set_worker_status(CTX,CHR)
 	char *CHR
     CODE:
         if (CTX->worker == NULL)
-            croak("worker status change attempted from a non-worker BLADEPSGI context\n");
+            croak("worker status change attempted from a non-worker BladePSGI context\n");
 		bladepsgi_perl_interpreter_cb_set_worker_status(CTX, CHR);
 
 SV *
