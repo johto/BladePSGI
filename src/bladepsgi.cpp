@@ -644,6 +644,7 @@ void
 print_usage(FILE *fh, const char *argv0)
 {
 	fprintf(fh, "%s exposes a PSGI application over FastCGI using a process-based architecture\n", argv0);
+	fprintf(fh, "\n");
 	fprintf(fh, "Usage:\n");
 	fprintf(fh, "  %s [OPTION]... APPLICATION_PATH NUM_WORKERS FASTCGI_SOCKET_PATH\n", argv0);
 	fprintf(fh, "\n");
@@ -654,6 +655,7 @@ print_usage(FILE *fh, const char *argv0)
 	fprintf(fh, "\n");
 	fprintf(fh, "Options\n");
 	fprintf(fh, "  --loader=LOADER              uses the Perl module LOADER as a loader\n");
+	fprintf(fh, "\n");
 }
 
 int
