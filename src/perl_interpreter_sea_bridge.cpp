@@ -30,6 +30,7 @@ bladepsgi_perl_interpreter_cb_psgi_application_path(BPSGI_Context *ctx)
 	Assert(ctx->mainapp != NULL);
 
 	auto mainapp = (BPSGIMainApplication *) ctx->mainapp;
+	Assert(mainapp->psgi_application_path() != NULL);
 
 	return mainapp->psgi_application_path();
 }
@@ -40,7 +41,6 @@ bladepsgi_perl_interpreter_cb_psgi_application_loader(BPSGI_Context *ctx)
 	Assert(ctx->mainapp != NULL);
 
 	auto mainapp = (BPSGIMainApplication *) ctx->mainapp;
-	Assert(mainapp->psgi_application_loader() != NULL);
 
 	return mainapp->psgi_application_loader();
 }

@@ -47,7 +47,8 @@ sub {
 			die "the second returned value from PSGI application loader must be a CODE reference; got ".ref($psgi_app)."\n";
 		}
 	} else {
-		die "loader currently required, sorry";
+		$psgi_app = Plack::Util::load_psgi($bladepsgi->psgi_application_path());
+		$psgi_env = {};
 	}
 
 	my $sockfd = $bladepsgi->fastcgi_listen_sockfd();

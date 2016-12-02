@@ -721,14 +721,6 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (opt_application_loader == NULL)
-	{
-		// TODO
-		fprintf(stderr, "only loader-based runs are currently supported\n");
-		print_usage(stderr, argv[0]);
-		exit(1);
-	}
-
 	auto psgi_application_path = argv[argc - 3];
 	auto nworkers_str = argv[argc - 2];
 	char *endptr;
