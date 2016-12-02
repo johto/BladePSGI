@@ -3,7 +3,7 @@ project (bladepsgi)
 
 
 #
-# RPSGI library
+# BladePSGI_Perl library
 #
 
 add_library(bladepsgi_perl STATIC src/perl/XS.c src/perl/bladepsgi_perl.c src/perl/typemap)
