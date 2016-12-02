@@ -61,7 +61,7 @@ BPSGIWorker::Run(BPSGIPerlCallbackFunction &main_callback)
 	char process_title[64];
 
 	snprintf(process_title, sizeof(process_title), "worker %d", (int) workerno_);
-	mainapp_->SubprocessInit(process_title);
+	mainapp_->SubprocessInit(process_title, SUBP_DEFAULT_FLAGS);
 	mainapp_->SetSignalHandler(SIGCHLD, SIG_IGN);
 	mainapp_->SetSignalHandler(SIGINT, SIG_IGN);
 	mainapp_->SetSignalHandler(SIGTERM, worker_sigterm_handler);

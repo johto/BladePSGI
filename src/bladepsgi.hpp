@@ -123,6 +123,11 @@ private:
 	void *ctx_;
 };
 
+enum BPSGISubprocessInitFlags {
+	SUBP_DEFAULT_FLAGS		= 0,
+	SUBP_NO_DEATHSIG		= 1,
+};
+
 class BPSGIMainApplication {
 public:
 
@@ -161,7 +166,7 @@ public:
 
 	unique_ptr<BPSGIPerlInterpreter> InitializePerlInterpreter();
 
-	void SubprocessInit(const char *new_process_title);
+	void SubprocessInit(const char *new_process_title, BPSGISubprocessInitFlags flags);
 	void SetSignalHandler(int signum, void (*handlerfunc)(int));
 	void BlockSignals();
 	void UnblockSignals();

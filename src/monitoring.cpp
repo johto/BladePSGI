@@ -33,7 +33,7 @@ BPSGIMonitoring::BPSGIMonitoring(BPSGIMainApplication *mainapp)
 int
 BPSGIMonitoring::Run()
 {
-	mainapp_->SubprocessInit("monitoring");
+	mainapp_->SubprocessInit("monitoring", SUBP_NO_DEATHSIG);
 	mainapp_->SetSignalHandler(SIGINT, SIG_IGN);
 	mainapp_->SetSignalHandler(SIGTERM, monitoring_sigterm_handler);
 	mainapp_->SetSignalHandler(SIGQUIT, monitoring_sigquit_handler);

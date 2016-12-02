@@ -212,22 +212,24 @@ BPSGIMainApplication::InitializePerlInterpreter()
 }
 
 void
-BPSGIMainApplication::SubprocessInit(const char *new_process_title)
+BPSGIMainApplication::SubprocessInit(const char *new_process_title, BPSGISubprocessInitFlags flags)
 {
-	int ret;
-
-	/* silence compiler warning if not Linux */
-	(void) ret;
+	(void) flags;
 
 #ifdef __linux__
-	ret = prctl(PR_SET_PDEATHSIG, (unsigned long) SIGQUIT, 0, 0);
-	if (ret == -1)
+	Assert(flags == 0 || flags == SUBP_NO_DEATHSIG);
+
+	if (flags != SUBP_NO_DEATHSIG)
 	{
-		/*
-		 * This should never happen, but it's not really a problem either.  Log
-		 * the incident but keep running as usual.
-		 */
-		Log(LS_WARNING, "prctl() failed: %s", strerror(errno));
+		int ret = prctl(PR_SET_PDEATHSIG, (unsigned long) SIGQUIT, 0, 0);
+		if (ret == -1)
+		{
+			/*
+			 * This should never happen, but it's not really a problem either.  Log
+			 * the incident but keep running as usual.
+			 */
+			Log(LS_WARNING, "prctl() failed: %s", strerror(errno));
+		}
 	}
 #endif
 
