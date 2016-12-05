@@ -47,3 +47,35 @@ bladepsgi_context_is_worker(CTX)
         RETVAL = boolSV(CTX->worker != NULL);
     OUTPUT:
         RETVAL
+
+SV *
+bladepsgi_context_new_semaphore(CTX,NAME,VALUE)
+    BPSGI_Context *CTX
+    char *NAME
+    int VALUE
+    CODE:
+        BPSGI_Semaphore *sem = malloc(sizeof(BPSGI_Semaphore));
+        const char *error = bladepsgi_perl_interpreter_cb_new_semaphore(CTX, sem, NAME, VALUE);
+        if (error != NULL)
+            croak("could not create a new semaphore %s: %s\n", NAME, error);
+        RETVAL = newSViv(0);
+        RETVAL = sv_setref_pv(RETVAL, "BPSGI::Semaphore", sem);
+    OUTPUT:
+        RETVAL
+
+MODULE = BPSGI PACKAGE=BPSGI::Semaphore PREFIX = bladepsgi_semaphore_
+PROTOTYPES: DISABLE
+
+SV *
+bladepsgi_semaphore_tryacquire(SEM)
+    BPSGI_Semaphore *SEM
+    CODE:
+        RETVAL = boolSV(bladepsgi_perl_interpreter_cb_sem_tryacquire(SEM));
+    OUTPUT:
+        RETVAL
+
+SV *
+bladepsgi_semaphore_release(SEM)
+    BPSGI_Semaphore *SEM
+    CODE:
+        bladepsgi_perl_interpreter_cb_sem_release(SEM);

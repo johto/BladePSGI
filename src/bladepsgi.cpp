@@ -439,6 +439,8 @@ BPSGIMainApplication::SpawnWorkers()
 		_exit(1);
 	}
 
+	shmem_->LockAllocations();
+
 	worker_pids_.reserve(nworkers_);
 
 	for (WorkerNo workerno = 0; workerno < nworkers_; ++workerno)

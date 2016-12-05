@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <vector>
 #include <signal.h>
+#include <string>
 #include <sys/errno.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -49,11 +50,31 @@ private:
 	const char *strerror_;
 };
 
+class BPSGISemaphore {
+public:
+	BPSGISemaphore(void *ptr, std::string name, int64_t value);
+
+	int64_t Read();
+	bool TryAcquire();
+	void Release();
+
+	std::string name() const { return name_; }
+
+private:
+	std::atomic<int_fast64_t> *ptr_;
+	std::string name_;
+	int64_t init_value_;
+};
+
 class BPSGISharedMemory {
 public:
 
 public:
 	BPSGISharedMemory(void *shared_memory_segment, size_t shmem_size);
+
+	void LockAllocations();
+	void *AllocateUserShmem(size_t size);
+	BPSGISemaphore *NewSemaphore(std::string name, int64_t value);
 
 	std::atomic<int_fast8_t> *WorkerArraySegment() const;
 	int_fast8_t GetWorkerStatus(WorkerNo workerno) const;
@@ -66,6 +87,10 @@ public:
 private:
 	char   *shared_memory_segment_;
 	size_t	shmem_size_;
+	bool	locked_;
+	size_t	next_user_available_offset_;
+
+	std::vector<unique_ptr<BPSGISemaphore>> semaphores_;
 };
 
 enum LogSeverity {
