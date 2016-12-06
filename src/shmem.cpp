@@ -54,6 +54,13 @@ BPSGISemaphore::Release()
 		throw std::string("unheld semaphore " + name_ + " released");
 }
 
+BPSGIAtomicInt64::BPSGIAtomicInt64(void *ptr, std::string name, int64_t value)
+	: ptr_((std::atomic<int64_t> *) ptr),
+	  name_(name)
+{
+	std::atomic_store(ptr_, value);
+}
+
 void
 BPSGISharedMemory::LockAllocations()
 {
@@ -91,6 +98,19 @@ BPSGISharedMemory::NewSemaphore(std::string name, int64_t value)
 	return semaphores_.rbegin()->get();
 }
 
+int64_t *
+BPSGISharedMemory::NewAtomicInt64(std::string name, int64_t value)
+{
+	for (auto const &atm : atomics_)
+	{
+		if (atm->name() == name)
+			throw std::string("atomic integer with name " + name + " already exists");
+	}
+
+	auto ptr = AllocateUserShmem(sizeof(int64_t));
+	atomics_.push_back(make_unique<BPSGIAtomicInt64>(ptr, name, value));
+	return (int64_t *) ptr;
+}
 
 BPSGISharedMemory::BPSGISharedMemory(void *shared_memory_segment, size_t shmem_size)
 	: shared_memory_segment_((char *) shared_memory_segment),

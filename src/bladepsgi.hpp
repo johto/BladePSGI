@@ -66,6 +66,17 @@ private:
 	int64_t init_value_;
 };
 
+class BPSGIAtomicInt64 {
+public:
+	BPSGIAtomicInt64(void *ptr, std::string name, int64_t value);
+
+	std::string name() const { return name_; }
+
+private:
+	std::atomic<int64_t> *ptr_;
+	std::string name_;
+};
+
 class BPSGISharedMemory {
 public:
 
@@ -75,6 +86,7 @@ public:
 	void LockAllocations();
 	void *AllocateUserShmem(size_t size);
 	BPSGISemaphore *NewSemaphore(std::string name, int64_t value);
+	int64_t *NewAtomicInt64(std::string name, int64_t value);
 
 	std::atomic<int_fast8_t> *WorkerArraySegment() const;
 	int_fast8_t GetWorkerStatus(WorkerNo workerno) const;
@@ -91,6 +103,7 @@ private:
 	size_t	next_user_available_offset_;
 
 	std::vector<unique_ptr<BPSGISemaphore>> semaphores_;
+	std::vector<unique_ptr<BPSGIAtomicInt64>> atomics_;
 };
 
 enum LogSeverity {

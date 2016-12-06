@@ -1,6 +1,7 @@
 TYPEMAP
 BPSGI_Context * T_PTROBJ_SPECIAL
 BPSGI_Semaphore * T_PTROBJ_SPECIAL
+BPSGI_AtomicInt64 * T_PTROBJ_SPECIAL
 
 INPUT
 T_PTROBJ_SPECIAL
@@ -10,13 +11,12 @@ T_PTROBJ_SPECIAL
     } else if (strcmp(\"$ntype\", \"BPSGI_SemaphorePtr\") == 0) {
         if (!sv_derived_from($arg, \"BPSGI::Semaphore\"))
             croak(\"$var is not of type BPSGI::Semaphore\");
+    } else if (strcmp(\"$ntype\", \"BPSGI_AtomicInt64Ptr\") == 0) {
+        if (!sv_derived_from($arg, \"BPSGI::AtomicInt64\"))
+            croak(\"$var is not of type BPSGI::AtomicInt64\");
     } else {
         croak(\"unexpected type $ntype\");
     }
 
 	IV tmp = SvIV((SV*) SvRV($arg));
 	$var = INT2PTR($type, tmp);
-
-OUTPUT
-T_PTROBJ_SPECIAL
-	sv_setref_pv($arg, \"BPSGI::Context\", (void *) $var);

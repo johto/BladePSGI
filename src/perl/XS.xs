@@ -63,6 +63,21 @@ bladepsgi_context_new_semaphore(CTX,NAME,VALUE)
     OUTPUT:
         RETVAL
 
+SV *
+bladepsgi_context_new_atomic_int64(CTX,NAME,VALUE)
+    BPSGI_Context *CTX
+    char *NAME
+    int VALUE
+    CODE:
+        BPSGI_AtomicInt64 *atm;
+        const char *error = bladepsgi_perl_interpreter_cb_new_atomic_int64(CTX, &atm, NAME, VALUE);
+        if (error != NULL)
+            croak("could not create a new 64-bit atomic integer %s: %s\n", NAME, error);
+        RETVAL = newSViv(0);
+        RETVAL = sv_setref_pv(RETVAL, "BPSGI::AtomicInt64", atm);
+    OUTPUT:
+        RETVAL
+
 MODULE = BPSGI PACKAGE=BPSGI::Semaphore PREFIX = bladepsgi_semaphore_
 PROTOTYPES: DISABLE
 
@@ -79,3 +94,15 @@ bladepsgi_semaphore_release(SEM)
     BPSGI_Semaphore *SEM
     CODE:
         bladepsgi_perl_interpreter_cb_sem_release(SEM);
+
+MODULE = BPSGI PACKAGE=BPSGI::AtomicInt64 PREFIX = bladepsgi_atomic_int64_
+PROTOTYPES: DISABLE
+
+SV *
+bladepsgi_atomic_int64_fetch_add(ATM,VAL)
+    BPSGI_AtomicInt64 *ATM
+    int VAL
+    CODE:
+        RETVAL = newSViv(bladepsgi_perl_interpreter_cb_atomic_int64_fetch_add(ATM,VAL));
+    OUTPUT:
+        RETVAL

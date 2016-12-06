@@ -65,6 +65,25 @@ bladepsgi_perl_interpreter_cb_new_semaphore(BPSGI_Context *ctx, BPSGI_Semaphore 
 	return NULL;
 }
 
+/*
+ * Returns NULL on success, or error message on failure.
+ */
+const char *
+bladepsgi_perl_interpreter_cb_new_atomic_int64(BPSGI_Context *ctx, BPSGI_AtomicInt64 **atm, const char *name, int value)
+{
+	Assert(ctx->mainapp != NULL);
+
+	auto mainapp = (BPSGIMainApplication *) ctx->mainapp;
+	auto shmem = mainapp->shmem();
+
+	try {
+		*atm = (BPSGI_AtomicInt64 *) shmem->NewAtomicInt64(name, value);
+	} catch (const std::string & ex) {
+		return strdup(ex.c_str());
+	}
+	return NULL;
+}
+
 int
 bladepsgi_perl_interpreter_cb_sem_tryacquire(BPSGI_Semaphore *sem)
 {
@@ -81,6 +100,12 @@ bladepsgi_perl_interpreter_cb_sem_release(BPSGI_Semaphore *sem)
 
 	auto p = (BPSGISemaphore *) sem->sem;
 	p->Release();
+}
+
+int64_t
+bladepsgi_perl_interpreter_cb_atomic_int64_fetch_add(BPSGI_AtomicInt64 *atm, int64_t value)
+{
+	return std::atomic_fetch_add((std::atomic<int64_t> *) atm, value);
 }
 
 }
