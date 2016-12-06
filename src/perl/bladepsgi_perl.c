@@ -114,50 +114,6 @@ bladepsgi_perl_interpreter_destroy(char **error_out)
 }
 
 int
-bladepsgi_psgi_application_init(const char *path, char **error_out)
-{
-	SV *sv = eval_pv("Plack::Util::load_psgi 'hello.psgi';", 0);
-	//SV *sv = eval_pv("die 'qwr';", 0);
-	if (SvTRUE(ERRSV))
-	{
-		const char *msg = SvPV_nolen(ERRSV);
-		size_t buflen = strlen(msg) + 128;
-		char *buf = malloc(buflen);
-		char *p;
-
-		snprintf(buf, buflen, "could load PSGI module %s: %s", "hello.psgi", msg);
-		*error_out = buf;
-		return -1;
-	}
-	//SV *input_stream = newSViv(0);
-	//BPSGI_InputStream is;
-	//is.foo = 10;
-	//input_stream = sv_setref_pv(input_stream, "BPSGI::InputStream", &is);
-	{
-		dSP;
-		ENTER;
-		SAVETMPS;
-		PUSHMARK(SP);
-		//XPUSHs(input_stream);
-		PUTBACK;
-
-		call_sv(sv, G_SCALAR);
-		if (SvTRUE(ERRSV))
-		{
-			fprintf(stderr, "OOPS\n");
-			_exit(EXIT_FAILURE);
-		}
-
-		SPAGAIN;
-		PUTBACK;
-		FREETMPS;
-		LEAVE;
-	}
-
-	return 0;
-}
-
-int
 bladepsgi_perl_callback_init(void *bladepsgictx, const char *source, const char *loader, struct bladepsgi_perl_callback_t **callback_out, char **error_out)
 {
 	int save_errno;
