@@ -46,6 +46,22 @@ bladepsgi_perl_interpreter_cb_psgi_application_loader(BPSGI_Context *ctx)
 	return mainapp->psgi_application_loader();
 }
 
+extern const char *
+bladepsgi_perl_interpreter_cb_request_auxiliary_process(BPSGI_Context *ctx, const char *name, void *sv)
+{
+	Assert(ctx->mainapp != NULL);
+
+	auto callback_p = (struct bladepsgi_perl_callback_t *) malloc(sizeof(struct bladepsgi_perl_callback_t));
+	memset(callback_p, 0, sizeof(struct bladepsgi_perl_callback_t));
+	callback_p->bladepsgictx = (void *) ctx;
+	callback_p->sv = sv;
+
+	auto mainapp = (BPSGIMainApplication *) ctx->mainapp;
+	mainapp->RequestAuxiliaryProcess(std::string(name), make_unique<BPSGIPerlCallbackFunction>(callback_p));
+
+	return NULL;
+}
+
 /*
  * Returns NULL on success, or error message on failure.
  */

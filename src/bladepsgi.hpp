@@ -142,6 +142,7 @@ private:
 
 class BPSGIMainApplication;
 class BPSGIWorker;
+class BPSGIAuxiliaryProcess;
 
 class BPSGIPerlInterpreter {
 public:
@@ -196,6 +197,8 @@ public:
 	const char *psgi_application_path() const { return psgi_application_path_; }
 	const char *psgi_application_loader() const { return application_loader_; }
 
+	void RequestAuxiliaryProcess(std::string name, unique_ptr<BPSGIPerlCallbackFunction> callback);
+
 	void KillProcessGroup(int sig);
 
 	bool ShouldExitImmediately() const { return shmem_->ShouldExitImmediately(); }
@@ -222,13 +225,14 @@ protected:
 	void InitializeSharedMemory();
 	void InitializeFastCGISocket();
 
-	void SpawnWorkers();
+	void SpawnWorkersAndAuxiliaryProcesses();
+	void SpawnAuxiliaryProcess(BPSGIAuxiliaryProcess &process);
 	void RunWorker(WorkerNo workerno, unique_ptr<BPSGIPerlInterpreter> interpreter, unique_ptr<BPSGIPerlCallbackFunction> main_callback);
 
 	void SpawnMonitoringProcess();
 	void RunMonitoringProcess();
 
-	void HandleUnexpectedChildProcessDeath(const char *process, pid_t pid, int status);
+	void HandleUnexpectedChildProcessDeath(const std::string process, pid_t pid, int status);
 	void HandleChildProcessDeath(pid_t pid, int status);
 
 private:
@@ -246,6 +250,9 @@ private:
 	pid_t	runner_pid_;
 	pid_t	monitoring_process_pid_;
 	std::vector<pid_t> worker_pids_;
+	std::vector<pid_t> auxiliary_pids_;
+
+	std::vector<unique_ptr<BPSGIAuxiliaryProcess>> auxiliary_processes_;
 
 	unique_ptr<BPSGISharedMemory> shmem_;
 	int fastcgi_sockfd_;
@@ -276,5 +283,24 @@ private:
 	BPSGIMainApplication *mainapp_;
 	WorkerNo workerno_;
 };
+
+class BPSGIAuxiliaryProcess {
+public:
+	BPSGIAuxiliaryProcess(BPSGIMainApplication *mainapp, std::string name, unique_ptr<BPSGIPerlCallbackFunction> callback);
+
+	std::string name() const { return name_; }
+	pid_t pid() const { return pid_; }
+	void SetPID(pid_t pid);
+
+	int Run();
+
+private:
+	BPSGIMainApplication *mainapp_;
+	std::string name_;
+	unique_ptr<BPSGIPerlCallbackFunction> callback_;
+
+	pid_t pid_;
+};
+
 
 #endif

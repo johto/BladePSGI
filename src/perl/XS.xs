@@ -48,6 +48,17 @@ bladepsgi_context_is_worker(CTX)
     OUTPUT:
         RETVAL
 
+void
+bladepsgi_context_request_auxiliary_process(CTX,NAME,CBACK)
+    BPSGI_Context *CTX
+    const char *NAME
+    SV *CBACK
+    CODE:
+        const char *error = bladepsgi_perl_interpreter_cb_request_auxiliary_process(CTX, NAME, CBACK);
+        if (error != NULL)
+            croak("could not create a new semaphore %s: %s\n", NAME, error);
+        SvREFCNT_inc(CBACK);
+
 SV *
 bladepsgi_context_new_semaphore(CTX,NAME,VALUE)
     BPSGI_Context *CTX

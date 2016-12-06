@@ -16,7 +16,7 @@ typedef struct
 
 typedef int64_t BPSGI_AtomicInt64;
 
-/* glue functions defined in perl_interpreter.cpp */
+/* glue functions defined in perl_interpreter_sea_bridge.cpp */
 extern void
 bladepsgi_perl_interpreter_cb_set_worker_status(BPSGI_Context *ctx, const char *status);
 extern int
@@ -25,6 +25,8 @@ extern const char *
 bladepsgi_perl_interpreter_cb_psgi_application_path(BPSGI_Context *ctx);
 extern const char *
 bladepsgi_perl_interpreter_cb_psgi_application_loader(BPSGI_Context *ctx);
+extern const char *
+bladepsgi_perl_interpreter_cb_request_auxiliary_process(BPSGI_Context *ctx, const char *name, void *sv);
 extern const char *
 bladepsgi_perl_interpreter_cb_new_semaphore(BPSGI_Context *ctx, BPSGI_Semaphore *sem, const char *name, int value);
 extern const char *

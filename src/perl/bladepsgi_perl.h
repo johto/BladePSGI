@@ -1,6 +1,8 @@
 #ifndef __BLADEPSGI_PERL_INTERPRETER_HEADER__
 #define __BLADEPSGI_PERL_INTERPRETER_HEADER__
 
+#include "XS.h"
+
 struct bladepsgi_perl_callback_t {
 	void *bladepsgictx;
 	void *sv;

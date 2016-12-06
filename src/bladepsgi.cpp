@@ -387,6 +387,27 @@ BPSGIMainApplication::InitializeFastCGISocket()
 }
 
 void
+BPSGIMainApplication::SpawnAuxiliaryProcess(BPSGIAuxiliaryProcess &process)
+{
+	pid_t pid = fork();
+	if (pid == -1)
+		throw SyscallException("fork", errno);
+	else if (pid == 0)
+	{
+		process.SetPID(getpid());
+		process.Run();
+		abort();
+	}
+	else if (pid > 0)
+	{
+		process.SetPID(pid);
+		auxiliary_pids_.push_back(pid);
+	}
+	else
+		throw SyscallException("fork", "unexpected return value %ld", (long) pid);
+}
+
+void
 BPSGIMainApplication::RunWorker(WorkerNo workerno, unique_ptr<BPSGIPerlInterpreter> interpreter, unique_ptr<BPSGIPerlCallbackFunction> main_callback)
 {
 	BPSGIWorker worker(this, workerno);
@@ -407,10 +428,11 @@ BPSGIMainApplication::RunWorker(WorkerNo workerno, unique_ptr<BPSGIPerlInterpret
 extern const char *fastcgi_wrapper_loader;
 
 void
-BPSGIMainApplication::SpawnWorkers()
+BPSGIMainApplication::SpawnWorkersAndAuxiliaryProcesses()
 {
 	unique_ptr<BPSGIPerlInterpreter> interpreter;
 	unique_ptr<BPSGIPerlCallbackFunction> wrapper_loader_callback;
+	unique_ptr<BPSGIPerlCallbackFunction> auxiliary_loader_callback;
 	unique_ptr<BPSGIPerlCallbackFunction> main_callback;
 
 	try {
@@ -429,17 +451,15 @@ BPSGIMainApplication::SpawnWorkers()
 
 	try {
 		main_callback = wrapper_loader_callback->CallAndReceiveCallback();
-
-		// TODO any way to make this crash nicely in debug builds?
-		//auto main_callback = init_callback->CallAndReceiveCallback();
-
-		//init_callback.Destroy();
 	} catch (const PerlInterpreterException &ex) {
 		Log(LS_ERROR, "Could not initialize PSGI callback: %s", ex.strerror());
 		_exit(1);
 	}
 
 	shmem_->LockAllocations();
+
+	for (auto && process : auxiliary_processes_)
+		SpawnAuxiliaryProcess(*process);
 
 	worker_pids_.reserve(nworkers_);
 
@@ -464,6 +484,13 @@ BPSGIMainApplication::SpawnWorkers()
 
 	main_callback.release();
 	interpreter->Destroy();
+}
+
+
+void
+BPSGIMainApplication::RequestAuxiliaryProcess(std::string name, unique_ptr<BPSGIPerlCallbackFunction> callback)
+{
+	auxiliary_processes_.push_back(make_unique<BPSGIAuxiliaryProcess>(this, name, std::move(callback)));
 }
 
 void
@@ -496,14 +523,14 @@ BPSGIMainApplication::RunMonitoringProcess()
 }
 
 void
-BPSGIMainApplication::HandleUnexpectedChildProcessDeath(const char *process, pid_t pid, int status)
+BPSGIMainApplication::HandleUnexpectedChildProcessDeath(const std::string process, pid_t pid, int status)
 {
 	if (shmem()->SetShouldExitImmediately())
 	{
 		if (WIFSIGNALED(status))
-			Log(LS_PANIC, "%s process %ld died to signal %d", process, (long) pid, WTERMSIG(status));
+			Log(LS_PANIC, "%s (pid %ld) died to signal %d", process.c_str(), (long) pid, WTERMSIG(status));
 		else
-			Log(LS_PANIC, "%s process %ld exited with code %d", process, (long) pid, WEXITSTATUS(status));
+			Log(LS_PANIC, "%s (pid %ld) exited with code %d", process.c_str(), (long) pid, WEXITSTATUS(status));
 	}
 	KillProcessGroup(SIGQUIT);
 	_exit(1);
@@ -516,21 +543,48 @@ BPSGIMainApplication::HandleChildProcessDeath(pid_t pid, int status)
 	if (witer != worker_pids_.end())
 	{
 		if (_mainapp_shutdown == 0)
-			HandleUnexpectedChildProcessDeath("worker", pid, status);
+			HandleUnexpectedChildProcessDeath("worker process", pid, status);
 		worker_pids_.erase(witer);
+		return;
 	}
-	else if (pid == monitoring_process_pid_)
+
+	auto auxiter = std::find(auxiliary_pids_.begin(), auxiliary_pids_.end(), pid);
+	if (auxiter != auxiliary_pids_.end())
 	{
 		if (_mainapp_shutdown == 0)
-			HandleUnexpectedChildProcessDeath("monitoring", pid, status);
-		monitoring_process_pid_ = -1;
+		{
+			auto prname = std::string("auxiliary process ");
+
+			auto found = false;
+			for (auto && process : auxiliary_processes_)
+			{
+				if (process->pid() == pid)
+				{
+					prname += process->name();
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+				abort();
+
+			HandleUnexpectedChildProcessDeath(prname, pid, status);
+		}
+		auxiliary_pids_.erase(auxiter);
+		return;
 	}
-	else
+
+	if (pid == monitoring_process_pid_)
 	{
-		(void) shmem()->SetShouldExitImmediately();
-		Log(LS_FATAL, "unknown child process %ld exited with code %d", (long) pid, WEXITSTATUS(status));
-		_exit(1);
+		if (_mainapp_shutdown == 0)
+			HandleUnexpectedChildProcessDeath("monitoring process", pid, status);
+		monitoring_process_pid_ = -1;
+		return;
 	}
+
+	(void) shmem()->SetShouldExitImmediately();
+	Log(LS_FATAL, "unknown child process %ld exited with code %d", (long) pid, WEXITSTATUS(status));
+	_exit(1);
 }
 
 int
@@ -540,9 +594,7 @@ BPSGIMainApplication::Run()
 	InitializeSelfPipe();
 	InitializeSharedMemory();
 	InitializeFastCGISocket();
-	SpawnWorkers();
-	// TODO
-	// SpawnAuxiliaryProcesses();
+	SpawnWorkersAndAuxiliaryProcesses();
 	SpawnMonitoringProcess();
 	SetSignalHandler(SIGCHLD, overseer_signal_handler);
 	SetSignalHandler(SIGINT, overseer_signal_handler);
