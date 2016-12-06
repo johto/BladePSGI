@@ -78,12 +78,11 @@ private:
 };
 
 class BPSGISharedMemory {
-public:
+	friend class BPSGIMainApplication;
 
 public:
 	BPSGISharedMemory(void *shared_memory_segment, size_t shmem_size);
 
-	void LockAllocations();
 	void *AllocateUserShmem(size_t size);
 	BPSGISemaphore *NewSemaphore(std::string name, int64_t value);
 	int64_t *NewAtomicInt64(std::string name, int64_t value);
@@ -95,6 +94,9 @@ public:
 	int_fast64_t IncreaseRequestCounter();
 	bool SetShouldExitImmediately();
 	bool ShouldExitImmediately() const;
+
+protected:
+	void LockAllocations();
 
 private:
 	char   *shared_memory_segment_;
