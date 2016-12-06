@@ -117,3 +117,18 @@ bladepsgi_atomic_int64_fetch_add(ATM,VAL)
         RETVAL = newSViv(bladepsgi_perl_interpreter_cb_atomic_int64_fetch_add(ATM,VAL));
     OUTPUT:
         RETVAL
+
+SV *
+bladepsgi_atomic_int64_load(ATM)
+    BPSGI_AtomicInt64 *ATM
+    CODE:
+        RETVAL = newSViv(bladepsgi_perl_interpreter_cb_atomic_int64_load(ATM));
+    OUTPUT:
+        RETVAL
+
+SV *
+bladepsgi_atomic_int64_store(ATM,VAL)
+    BPSGI_AtomicInt64 *ATM
+    int VAL
+    CODE:
+        bladepsgi_perl_interpreter_cb_atomic_int64_store(ATM,VAL);

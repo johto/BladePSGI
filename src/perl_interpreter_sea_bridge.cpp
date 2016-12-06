@@ -124,4 +124,17 @@ bladepsgi_perl_interpreter_cb_atomic_int64_fetch_add(BPSGI_AtomicInt64 *atm, int
 	return std::atomic_fetch_add((std::atomic<int64_t> *) atm, value);
 }
 
+int64_t
+bladepsgi_perl_interpreter_cb_atomic_int64_load(BPSGI_AtomicInt64 *atm)
+{
+	return std::atomic_load((std::atomic<int64_t> *) atm);
+}
+
+void
+bladepsgi_perl_interpreter_cb_atomic_int64_store(BPSGI_AtomicInt64 *atm, int64_t value)
+{
+	return std::atomic_store((std::atomic<int64_t> *) atm, value);
+}
+
+
 }

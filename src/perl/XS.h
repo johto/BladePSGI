@@ -37,6 +37,10 @@ extern void
 bladepsgi_perl_interpreter_cb_sem_release(BPSGI_Semaphore *sem);
 extern int64_t
 bladepsgi_perl_interpreter_cb_atomic_int64_fetch_add(BPSGI_AtomicInt64 *atm, int64_t value);
+extern int64_t
+bladepsgi_perl_interpreter_cb_atomic_int64_load(BPSGI_AtomicInt64 *atm);
+extern void
+bladepsgi_perl_interpreter_cb_atomic_int64_store(BPSGI_AtomicInt64 *atm, int64_t value);
 
 
 #endif
