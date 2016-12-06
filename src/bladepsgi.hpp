@@ -249,14 +249,6 @@ private:
 	int fastcgi_sockfd_;
 };
 
-class PSGIApplication {
-public:
-
-public:
-
-private:
-};
-
 class BPSGIMonitoring {
 public:
 	BPSGIMonitoring(BPSGIMainApplication *mainapp);
