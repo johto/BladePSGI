@@ -6,6 +6,28 @@ project (bladepsgi)
 # BladePSGI_Perl library
 #
 
+execute_process(COMMAND perl -MConfig -e print\ \$Config{use64bitint} OUTPUT_VARIABLE PERLCONFIG_USE64BITINT RESULT_VARIABLE PERL_FAILED)
+if(NOT PERL_FAILED STREQUAL "0")
+    message(FATAL_ERROR "Perl not found")
+elseif(NOT PERLCONFIG_USE64BITINT STREQUAL "define")
+    message(FATAL_ERROR "Your Perl installation has not been configured with use64bitint")
+endif()
+
+execute_process(COMMAND perl -MConfig -e print\ \$Config{use64bitall} OUTPUT_VARIABLE PERLCONFIG_USE64BITINT)
+if(NOT PERLCONFIG_USE64BITINT STREQUAL "define")
+    message(FATAL_ERROR "Your Perl installation has not been configured with use64bitall")
+endif()
+
+execute_process(COMMAND perl -MConfig -e print\ \$Config{ivsize} OUTPUT_VARIABLE PERLCONFIG_USE64BITINT)
+if(NOT PERLCONFIG_USE64BITINT STREQUAL "8")
+    message(FATAL_ERROR "Your Perl installation has not been configured with a 64-bit ivsize")
+endif()
+
+execute_process(COMMAND perl -MConfig -e print\ \$Config{ptrsize} OUTPUT_VARIABLE PERLCONFIG_USE64BITINT)
+if(NOT PERLCONFIG_USE64BITINT STREQUAL "8")
+    message(FATAL_ERROR "Your Perl installation has not been configured with a 64-bit ptrsize")
+endif()
+
 add_library(bladepsgi_perl STATIC src/perl/XS.c src/perl/bladepsgi_perl.c src/perl/typemap)
 
 add_custom_command(
