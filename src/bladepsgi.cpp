@@ -5,6 +5,10 @@
 
 #include <getopt.h>
 
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/stat.h>
+
 #ifdef __linux__
 #include <sys/prctl.h>
 #endif
@@ -86,6 +90,7 @@ BPSGIMainApplication::BPSGIMainApplication(
 	int nworkers,
 	const char *application_loader,
 	const char *fastcgi_socket_path,
+	const char *stats_socket_path,
 	const char *opt_process_title_prefix
 )
 	: argc_(argc),
@@ -94,6 +99,7 @@ BPSGIMainApplication::BPSGIMainApplication(
 	  nworkers_(nworkers),
 	  application_loader_(application_loader),
 	  fastcgi_socket_path_(fastcgi_socket_path),
+	  stats_socket_path_(stats_socket_path),
 	  process_title_prefix_(opt_process_title_prefix),
 	  runner_pid_(-1),
 	  monitoring_process_pid_(-1),
@@ -299,17 +305,29 @@ BPSGIMainApplication::InitializeSharedMemory()
 }
 
 /*
- * InitializeFastCGISocket initializes a socket for serving FastCGI requests.
- * It should only be called once for the entire program, in the runner process.
+ * InitializeMainFastCGISocket initializes a socket for serving FastCGI
+ * requests.  It should only be called once for the entire program, in the
+ * runner process.
  */
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <sys/stat.h>
 void
-BPSGIMainApplication::InitializeFastCGISocket()
+BPSGIMainApplication::InitializeMainFastCGISocket()
 {
 	const int listen_backlog_size_ = 16384;
 
+	fastcgi_sockfd_ = InitializeUNIXSocket(fastcgi_socket_path_, listen_backlog_size_);
+}
+
+void
+BPSGIMainApplication::InitializeStatsSocket()
+{
+	const int listen_backlog_size_ = 64;
+
+	stats_sockfd_ = InitializeUNIXSocket(stats_socket_path_, listen_backlog_size_);
+}
+
+int
+BPSGIMainApplication::InitializeUNIXSocket(const char *path, const int listen_backlog_size_)
+{
 	int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sockfd == -1)
 		throw SyscallException("socket", errno);
@@ -317,12 +335,11 @@ BPSGIMainApplication::InitializeFastCGISocket()
 	struct sockaddr_un addr;
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	(void) snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", fastcgi_socket_path_);
+	(void) snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path);
 
 	struct stat st;
 	if (stat(addr.sun_path, &st) == 0)
 	{
-		// TODO: improve error messages here
 		if (!S_ISSOCK(st.st_mode))
 			throw RuntimeException("file %s already exists and is not a socket", addr.sun_path);
 		if (unlink(addr.sun_path) == -1)
@@ -334,7 +351,7 @@ BPSGIMainApplication::InitializeFastCGISocket()
 	if (listen(sockfd, listen_backlog_size_) == -1)
 		throw SyscallException("listen", errno);
 
-	fastcgi_sockfd_ = sockfd;
+	return sockfd;
 }
 
 void
@@ -456,6 +473,8 @@ BPSGIMainApplication::SpawnMonitoringProcess()
 		monitoring_process_pid_ = pid;
 	else
 		throw SyscallException("fork", "unexpected return value %ld", (long) pid);
+
+	close(stats_sockfd_);
 }
 
 void
@@ -544,7 +563,8 @@ BPSGIMainApplication::Run()
 	BlockSignals();
 	InitializeSelfPipe();
 	InitializeSharedMemory();
-	InitializeFastCGISocket();
+	InitializeMainFastCGISocket();
+	InitializeStatsSocket();
 	SpawnWorkersAndAuxiliaryProcesses();
 	SpawnMonitoringProcess();
 	SetSignalHandler(SIGCHLD, overseer_signal_handler);
@@ -654,12 +674,13 @@ print_usage(FILE *fh, const char *argv0)
 	fprintf(fh, "%s exposes a PSGI application over FastCGI using a process-based architecture\n", argv0);
 	fprintf(fh, "\n");
 	fprintf(fh, "Usage:\n");
-	fprintf(fh, "  %s [OPTION]... APPLICATION_PATH NUM_WORKERS FASTCGI_SOCKET_PATH\n", argv0);
+	fprintf(fh, "  %s [OPTION]... APPLICATION_PATH NUM_WORKERS FASTCGI_SOCKET_PATH STATS_SOCKET_PATH\n", argv0);
 	fprintf(fh, "\n");
 	fprintf(fh, "Arguments:\n");
 	fprintf(fh, "  APPLICATION_PATH             filesystem path to the PSGI application\n");
 	fprintf(fh, "  NUM_WORKERS                  the number of workers processes to spawn\n");
 	fprintf(fh, "  FASTCGI_SOCKET_PATH          the file system path at which to create the FastCGI socket\n");
+	fprintf(fh, "  STATS_SOCKET_PATH            the file system path at which to create the statistics socket\n");
 	fprintf(fh, "\n");
 	fprintf(fh, "Options\n");
 	fprintf(fh, "  --loader=LOADER              uses the Perl module LOADER as a loader\n");
@@ -722,14 +743,14 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (optind != argc - 3)
+	if (optind != argc - 4)
 	{
 		print_usage(stderr, argv[0]);
 		exit(1);
 	}
 
-	auto psgi_application_path = argv[argc - 3];
-	auto nworkers_str = argv[argc - 2];
+	auto psgi_application_path = argv[argc - 4];
+	auto nworkers_str = argv[argc - 3];
 	char *endptr;
 	long nworkers = strtol(nworkers_str, &endptr, 10);
 	if (*endptr != '\0')
@@ -743,7 +764,8 @@ main(int argc, char *argv[])
 		fprintf(stderr, "the number of workers must be between 1 and 65536\n");
 		exit(1);
 	}
-	auto fastcgi_socket_path = argv[argc - 1];
+	auto fastcgi_socket_path = argv[argc - 2];
+	auto stats_socket_path = argv[argc - 1];
 
 	mainapp = make_unique<BPSGIMainApplication>(
 		argc,
@@ -752,6 +774,7 @@ main(int argc, char *argv[])
 		nworkers,
 		opt_application_loader,
 		fastcgi_socket_path,
+		stats_socket_path,
 		opt_process_title_prefix
 	);
 

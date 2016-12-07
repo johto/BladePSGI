@@ -61,6 +61,12 @@ BPSGIAtomicInt64::BPSGIAtomicInt64(void *ptr, std::string name, int64_t value)
 	std::atomic_store(ptr_, value);
 }
 
+int64_t
+BPSGIAtomicInt64::Read()
+{
+	return std::atomic_load(ptr_);
+}
+
 void
 BPSGISharedMemory::LockAllocations()
 {
@@ -154,6 +160,14 @@ BPSGISharedMemory::IncreaseRequestCounter()
 	auto m = (std::atomic<int_fast64_t> *) (shared_memory_segment_ + SHMEM_REQUEST_COUNTER_OFF);
 	return std::atomic_fetch_add<int_fast64_t>(m, 1);
 }
+
+int_fast64_t
+BPSGISharedMemory::ReadRequestCounter()
+{
+	auto m = (std::atomic<int_fast64_t> *) (shared_memory_segment_ + SHMEM_REQUEST_COUNTER_OFF);
+	return std::atomic_load(m);
+}
+
 
 /*
  * If SetShouldExitImmediately returns true the caller should log why it

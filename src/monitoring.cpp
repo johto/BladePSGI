@@ -1,25 +1,23 @@
 #include "bladepsgi.hpp"
 
-#include <cstdio>
-#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
-static sig_atomic_t _monitoring_terminated = 0;
+#include <sstream>
 
-static void
-monitoring_sigterm_handler(int _unused)
+
+static std::string
+int64_to_string(int64_t value)
 {
-	(void) _unused;
-	_monitoring_terminated = 1;
+	std::ostringstream oss;
+	oss << value;
+	return oss.str();
 }
 
 static void
 monitoring_sigquit_handler(int _unused)
 {
-	/*
-	 * On SIGQUIT we just die immediately.  No cleanup is attempted (or
-	 * necessary); this should only happen if we really should shut ourselves
-	 * down immediately.
-	 */
+	/* behave like worker_sigquit_handler */
 	(void) _unused;
 	_exit(2);
 }
@@ -30,23 +28,57 @@ BPSGIMonitoring::BPSGIMonitoring(BPSGIMainApplication *mainapp)
 {
 }
 
+void
+BPSGIMonitoring::HandleClient(int listensockfd, std::vector<char> worker_status_array)
+{
+	struct sockaddr_un their_addr;
+	socklen_t addr_size = sizeof(their_addr);
+
+	int clientfd = accept(listensockfd, (struct sockaddr *) &their_addr, &addr_size);
+	if (clientfd == -1)
+	{
+		if (errno == EINTR)
+		{
+			/* we'll get called again if there's still a client waiting */
+			return;
+		}
+		throw SyscallException("accept", errno);
+	}
+
+	auto shmem = mainapp_->shmem();
+
+	auto statdata = std::string(worker_status_array.data(), worker_status_array.size()) + "\n";
+	statdata += int64_to_string(shmem->ReadRequestCounter()) + "\n";
+	for (auto && sem : shmem->semaphores_)
+		statdata += "sem " + sem->name() + ": " + int64_to_string(sem->Read()) + "\n";
+	for (auto && atm : shmem->atomics_)
+		statdata += "atomic " + atm->name() + ": " + int64_to_string(atm->Read()) + "\n";
+
+	(void) write(clientfd, statdata.c_str(), statdata.size());
+	shutdown(clientfd, SHUT_RDWR);
+	close(clientfd);
+}
+
 int
 BPSGIMonitoring::Run()
 {
 	mainapp_->SubprocessInit("monitoring", SUBP_NO_DEATHSIG);
-	mainapp_->SetSignalHandler(SIGINT, SIG_IGN);
-	mainapp_->SetSignalHandler(SIGTERM, monitoring_sigterm_handler);
+	mainapp_->SetSignalHandler(SIGINT, SIG_DFL);
+	mainapp_->SetSignalHandler(SIGTERM, SIG_DFL);
 	mainapp_->SetSignalHandler(SIGQUIT, monitoring_sigquit_handler);
 	mainapp_->UnblockSignals();
 
+	int listen_sockfd = mainapp_->stats_sockfd();
+
 	int nworkers = mainapp_->nworkers();
-	auto worker_status_data = std::vector<char>(nworkers + 1);
-	worker_status_data[nworkers] = '\0';
+	auto worker_status_data = std::vector<char>(nworkers);
 	auto shmem = mainapp_->shmem();
 
 	for (;;)
 	{
-		/* TODO: do more here! */
+		struct timeval tv;
+		fd_set fds;
+
 		if (mainapp_->RunnerDied())
 		{
 			if (mainapp_->shmem()->SetShouldExitImmediately())
@@ -54,12 +86,28 @@ BPSGIMonitoring::Run()
 			_exit(1);
 		}
 
-		sleep(1);
+		memset(&tv, 0, sizeof(tv));
+		tv.tv_sec = 1;
+		tv.tv_usec = 0;
 
-		shmem->GetAllWorkerStatuses(nworkers, worker_status_data.data());
-		fprintf(stdout, "%s\n", worker_status_data.data());
+		FD_ZERO(&fds);
+		FD_SET(listen_sockfd, &fds);
 
-		if (_monitoring_terminated == 1)
-			_exit(0);
+		int ret = select(listen_sockfd + 1, &fds, NULL, NULL, &tv);
+		if (ret == 0)
+			continue;
+		else if (ret == -1)
+		{
+			if (errno != EINTR)
+				throw SyscallException("select", errno);
+		}
+		else if (ret == 1)
+		{
+			shmem->GetAllWorkerStatuses(nworkers, worker_status_data.data());
+			HandleClient(listen_sockfd, worker_status_data);
+			continue;
+		}
+		else
+			throw SyscallException("select", "unexpected return value %d", ret);
 	}
 }

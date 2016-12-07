@@ -82,6 +82,8 @@ class BPSGIAtomicInt64 {
 public:
 	BPSGIAtomicInt64(void *ptr, std::string name, int64_t value);
 
+	int64_t Read();
+
 	std::string name() const { return name_; }
 
 private:
@@ -91,6 +93,7 @@ private:
 
 class BPSGISharedMemory {
 	friend class BPSGIMainApplication;
+	friend class BPSGIMonitoring;
 
 public:
 	BPSGISharedMemory(void *shared_memory_segment, size_t shmem_size);
@@ -104,20 +107,20 @@ public:
 	void GetAllWorkerStatuses(int nworkers, char *out) const;
 
 	int_fast64_t IncreaseRequestCounter();
+	int_fast64_t ReadRequestCounter();
 	bool SetShouldExitImmediately();
 	bool ShouldExitImmediately() const;
 
 protected:
 	void LockAllocations();
 
+	std::vector<unique_ptr<BPSGISemaphore>> semaphores_;
+	std::vector<unique_ptr<BPSGIAtomicInt64>> atomics_;
 private:
 	char   *shared_memory_segment_;
 	size_t	shmem_size_;
 	bool	locked_;
 	size_t	next_user_available_offset_;
-
-	std::vector<unique_ptr<BPSGISemaphore>> semaphores_;
-	std::vector<unique_ptr<BPSGIAtomicInt64>> atomics_;
 };
 
 enum LogSeverity {
@@ -192,6 +195,7 @@ public:
 		int nworkers,
 		const char *application_loader,
 		const char *fastcgi_socket_path,
+		const char *stats_socket_path,
 		const char *process_title_prefix
 	);
 
@@ -205,6 +209,7 @@ public:
 	pid_t runner_pid() const { return runner_pid_; }
 	BPSGISharedMemory * shmem() const { return shmem_.get(); }
 	int fastcgi_sockfd() const { return fastcgi_sockfd_; }
+	int stats_sockfd() const { return stats_sockfd_; }
 
 	const char *psgi_application_path() const { return psgi_application_path_; }
 	const char *psgi_application_loader() const { return application_loader_; }
@@ -235,7 +240,10 @@ protected:
 	void DrainSelfPipe();
 
 	void InitializeSharedMemory();
-	void InitializeFastCGISocket();
+	void InitializeMainFastCGISocket();
+	void InitializeStatsSocket();
+
+	int InitializeUNIXSocket(const char *path, const int listen_backlog_size_);
 
 	void SpawnWorkersAndAuxiliaryProcesses();
 	void SpawnAuxiliaryProcess(BPSGIAuxiliaryProcess &process);
@@ -257,6 +265,7 @@ private:
 	int			nworkers_;
 	const char *application_loader_;
 	const char *fastcgi_socket_path_;
+	const char *stats_socket_path_;
 	const char *process_title_prefix_;
 
 	pid_t	runner_pid_;
@@ -268,12 +277,16 @@ private:
 
 	unique_ptr<BPSGISharedMemory> shmem_;
 	int fastcgi_sockfd_;
+	int stats_sockfd_;
 };
 
 class BPSGIMonitoring {
 public:
 	BPSGIMonitoring(BPSGIMainApplication *mainapp);
 	int Run();
+
+protected:
+	void HandleClient(int listensockfd, std::vector<char> worker_status_array);
 
 private:
 	BPSGIMainApplication *mainapp_;
