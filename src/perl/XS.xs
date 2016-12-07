@@ -110,6 +110,12 @@ MODULE = BPSGI PACKAGE=BPSGI::AtomicInt64 PREFIX = bladepsgi_atomic_int64_
 PROTOTYPES: DISABLE
 
 SV *
+bladepsgi_atomic_int64_incr(ATM)
+    BPSGI_AtomicInt64 *ATM
+    CODE:
+        bladepsgi_perl_interpreter_cb_atomic_int64_fetch_add(ATM, 1);
+
+SV *
 bladepsgi_atomic_int64_fetch_add(ATM,VAL)
     BPSGI_AtomicInt64 *ATM
     int VAL
