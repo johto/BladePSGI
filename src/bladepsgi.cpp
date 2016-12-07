@@ -79,55 +79,6 @@ BPSGIMainApplication::HandleParentSignal(int sig)
 	errno = save_errno;
 }
 
-SyscallException::SyscallException(const char *syscall, int s_errno)
-	: syscall_(syscall),
-	  s_errno_(s_errno),
-	  strerror_(NULL)
-{
-
-}
-
-SyscallException::SyscallException(const char *syscall, const char *fmt, ...)
-	: syscall_(syscall),
-	  s_errno_(-1)
-{
-	va_list ap;
-	const size_t bufsize = 4096;
-	char *buf = (char *) malloc(bufsize);
-
-	va_start(ap, fmt);
-	(void) vsnprintf(buf, bufsize, fmt, ap);
-	va_end(ap);
-
-	strerror_ = buf;
-}
-
-SyscallException::~SyscallException()
-{
-	if (strerror_ != NULL)
-	{
-		free((void *) strerror_);
-		strerror_ = NULL;
-	}
-}
-
-const char *
-SyscallException::syscall() const
-{
-	return syscall_;
-}
-
-const char *
-SyscallException::strerror() const
-{
-	Assert((strerror_ != NULL) != (s_errno_ != -1));
-
-	if (strerror_ != NULL)
-		return strerror_;
-	else
-		return ::strerror(s_errno_);
-}
-
 BPSGIMainApplication::BPSGIMainApplication(
 	int argc,
 	char **argv,
@@ -373,9 +324,9 @@ BPSGIMainApplication::InitializeFastCGISocket()
 	{
 		// TODO: improve error messages here
 		if (!S_ISSOCK(st.st_mode))
-			throw SyscallException("whatever", "file %s already exists and is not a socket", addr.sun_path);
+			throw RuntimeException("file %s already exists and is not a socket", addr.sun_path);
 		if (unlink(addr.sun_path) == -1)
-			throw SyscallException("unlink", errno);
+			throw RuntimeException("could not remove socket file %s: %s", addr.sun_path, strerror(errno));
 	}
 
 	if (bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)) == -1)
@@ -804,14 +755,21 @@ main(int argc, char *argv[])
 		opt_process_title_prefix
 	);
 
-	int ret;
-	try {
-		ret = mainapp->Run();
-	} catch (const SyscallException &ex) {
+	try
+	{
+		mainapp->Run();
+	}
+	catch (const SyscallException &ex)
+	{
 		if (mainapp->SetShouldExitImmediately())
 			mainapp->Log(LS_FATAL, "system call %s failed: %s\n", ex.syscall(), ex.strerror());
-		mainapp->KillProcessGroup(SIGQUIT);
-		_exit(1);
 	}
-	return ret;
+	catch (const RuntimeException &ex)
+	{
+		if (mainapp->SetShouldExitImmediately())
+			mainapp->Log(LS_FATAL, "%s", ex.error());
+	}
+
+	mainapp->KillProcessGroup(SIGQUIT);
+	_exit(1);
 }

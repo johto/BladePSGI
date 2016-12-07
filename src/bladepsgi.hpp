@@ -39,7 +39,7 @@ public:
 	SyscallException(const char *syscall, const char *fmt, ...);
 	~SyscallException();
 
-	const char *syscall() const;
+	const char *syscall() const { return syscall_; }
 	const char *strerror() const;
 
 private:
@@ -47,8 +47,20 @@ private:
 
 	// Only one of these is set
 	int s_errno_;
-	const char *strerror_;
+	char *strerror_;
 };
+
+class RuntimeException {
+public:
+	RuntimeException(const char *fmt, ...);
+	~RuntimeException();
+
+	const char *error() const { return error_; }
+
+private:
+	char *error_;
+};
+
 
 class BPSGISemaphore {
 public:
