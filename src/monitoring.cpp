@@ -54,7 +54,8 @@ BPSGIMonitoring::HandleClient(int listensockfd, std::vector<char> worker_status_
 	for (auto && atm : shmem->atomics_)
 		statdata += "atomic " + atm->name() + ": " + int64_to_string(atm->Read()) + "\n";
 
-	(void) write(clientfd, statdata.c_str(), statdata.size());
+	auto written = write(clientfd, statdata.c_str(), statdata.size());
+	(void) written;
 	shutdown(clientfd, SHUT_RDWR);
 	close(clientfd);
 }
