@@ -233,26 +233,34 @@ BPSGIMainApplication::SetProcessTitle(const char *value)
 {
 	auto prefix = std::string(process_title_prefix_);
 
-#ifdef __linux__
-	char *end = NULL;
+	size_t maxlen;
+	char *end = argv_[0] + strlen(argv_[0]);
 
-	// Use the entire argv space as long as it's contiguous.  We could continue
-	// into environment as well, but that doesn't seem necessary.
-	for (int i = 0; i < argc_; i++)
+	for (int i = 1; i < argc_; i++)
 	{
-		if (i == 0 || end + 1 == argv_[i])
+		if (end + 1 == argv_[i])
 			end = argv_[i] + strlen(argv_[i]);
+		else
+			break;
 	}
-	Assert(end != NULL);
+	maxlen = end - argv_[0];
 
-	size_t maxlen = end - argv_[0];
-#else
-	size_t maxlen = strlen(argv_[0]);
+#ifdef __linux__
+	if (environ[0] == end + 1)
+	{
+		/*
+		 * On Linux we can pretend to run into the environment even if actually
+		 * don't.  That way we have full control over the title as the kernel
+		 * just takes an strlen() of argv[0].
+		 */
+		maxlen = end - argv_[0] - 1;
+		*end = ' ';
+	}
 #endif
 
 	std::string full_title = (prefix + ": " + value);
-	std::string new_title = full_title.substr(0, maxlen - 1);
-	new_title.resize(maxlen, '\0');
+	std::string new_title = full_title.substr(0, maxlen);
+	new_title.resize(maxlen + 1, '\0');
 	memcpy(argv_[0], new_title.data(), new_title.length());
 
 #ifdef __linux__
