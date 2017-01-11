@@ -115,7 +115,9 @@ BPSGIMainApplication::KillProcessGroup(int sig)
 	Assert(sig == SIGQUIT || sig == SIGTERM);
 	for (auto pid : worker_pids_)
 		(void) kill(pid, sig);
-	(void) kill(monitoring_process_pid_, sig);
+
+	if (monitoring_process_pid_ != -1)
+		(void) kill(monitoring_process_pid_, sig);
 }
 
 bool
