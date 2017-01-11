@@ -787,7 +787,7 @@ main(int argc, char *argv[])
 	catch (const SyscallException &ex)
 	{
 		if (mainapp->SetShouldExitImmediately())
-			mainapp->Log(LS_FATAL, "system call %s failed: %s\n", ex.syscall(), ex.strerror());
+			mainapp->Log(LS_FATAL, "system call %s failed: %s", ex.syscall(), ex.strerror());
 	}
 	catch (const RuntimeException &ex)
 	{
