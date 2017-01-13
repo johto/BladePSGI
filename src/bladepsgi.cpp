@@ -256,6 +256,11 @@ BPSGIMainApplication::SetProcessTitle(const char *value)
 	std::string new_title = full_title;
 	new_title.resize(maxlen, pad);
 
+#ifdef __linux__
+	if (prctl(PR_SET_NAME, (unsigned long) full_title.c_str(), 0, 0, 0) != 0)
+		throw SyscallException("prctl", errno);
+#endif
+
 	strcpy(argv_[0], new_title.c_str());
 }
 
