@@ -234,13 +234,28 @@ BPSGIMainApplication::SetProcessTitle(const char *value)
 	auto prefix = std::string(process_title_prefix_);
 
 #ifdef __linux__
-	size_t maxlen = 16;
+	char *end = NULL;
+	const char pad = ' ';
+
+	// Use the entire argv space as long as it's contiguous.  We could continue
+	// into environment as well, but that doesn't seem necessary.
+	for (int i = 0; i < argc_; i++)
+	{
+		if (i == 0 || end + 1 == argv_[i])
+			end = argv_[i] + strlen(argv_[i]);
+	}
+	Assert(end != NULL);
+
+	size_t maxlen = end - argv_[0];
 #else
-	size_t maxlen = 0;
-	for (int i = 0; i < argc_; ++i)
-		maxlen += strlen(argv_[i]) + 1;
+	const char pad = '\0';
+	size_t maxlen = strlen(argv_[0]);
 #endif
-	std::string new_title = (prefix + ": " + value).substr(0, maxlen - 1);
+
+	std::string full_title = (prefix + ": " + value);
+	std::string new_title = full_title;
+	new_title.resize(maxlen, pad);
+
 	strcpy(argv_[0], new_title.c_str());
 }
 
