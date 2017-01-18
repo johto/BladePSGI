@@ -235,7 +235,6 @@ BPSGIMainApplication::SetProcessTitle(const char *value)
 
 #ifdef __linux__
 	char *end = NULL;
-	const char pad = ' ';
 
 	// Use the entire argv space as long as it's contiguous.  We could continue
 	// into environment as well, but that doesn't seem necessary.
@@ -248,20 +247,18 @@ BPSGIMainApplication::SetProcessTitle(const char *value)
 
 	size_t maxlen = end - argv_[0];
 #else
-	const char pad = '\0';
 	size_t maxlen = strlen(argv_[0]);
 #endif
 
 	std::string full_title = (prefix + ": " + value);
-	std::string new_title = full_title;
-	new_title.resize(maxlen, pad);
+	std::string new_title = full_title.substr(0, maxlen - 1);
+	new_title.resize(maxlen, '\0');
+	memcpy(argv_[0], new_title.data(), new_title.length());
 
 #ifdef __linux__
 	if (prctl(PR_SET_NAME, (unsigned long) full_title.c_str(), 0, 0, 0) != 0)
 		throw SyscallException("prctl", errno);
 #endif
-
-	strcpy(argv_[0], new_title.c_str());
 }
 
 void
