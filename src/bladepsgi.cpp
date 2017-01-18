@@ -264,7 +264,6 @@ BPSGIMainApplication::SetProcessTitle(const char *value)
 	strcpy(argv_[0], new_title.c_str());
 }
 
-
 void
 BPSGIMainApplication::InitializeSelfPipe()
 {
