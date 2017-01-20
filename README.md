@@ -82,8 +82,7 @@ provided subroutine, which should never return.
 Requests a new shared semaphore with the provided name and initial value.  The
 return value is an object which provides the following methods:
 
-###### tryacquire(): If the current value of the semaphore is larger than zero,
-###### decreases the value by one and returns TRUE.  Otherwise returns FALSE.
+###### tryacquire(): If the current value of the semaphore is larger than zero, decreases the value by one and returns TRUE.  Otherwise returns FALSE.
 
 ###### release(): Increases the current value of the semaphore by one.
 
