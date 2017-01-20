@@ -795,7 +795,7 @@ main(int argc, char *argv[])
 		else if (strcmp(argv[1], "-v") == 0 ||
 				 strcmp(argv[1], "--version") == 0)
 		{
-			puts("bladepsgi version 1.0alpha1");
+			puts("bladepsgi version 1.0alpha2");
 			exit(0);
 		}
 	}
