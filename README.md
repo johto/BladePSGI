@@ -35,6 +35,9 @@ unlikely, but adding support for BSDs should be relatively straightforward.
 Building the binary requires cmake version 2.8 or later and a C++11 compatible
 compiler.
 
+The Plack::Util, FCGI and HTTP::Status Perl modules should also be available on
+the server(s) that are going to run _BladePSGI_.
+
 How to build
 ------------
 
