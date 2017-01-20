@@ -124,7 +124,7 @@ private:
 };
 
 enum LogSeverity {
-	LS_INFO,
+	LS_LOG,
 	LS_WARNING,
 	LS_ERROR,
 	LS_FATAL,

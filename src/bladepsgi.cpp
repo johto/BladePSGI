@@ -8,6 +8,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/stat.h>
+#include <ctime>
+#include <sys/time.h>
 
 #ifdef __linux__
 #include <sys/prctl.h>
@@ -132,17 +134,65 @@ void
 BPSGIMainApplication::Log(LogSeverity severity, const char *fmt, ...)
 {
 	va_list ap;
+	char timestr[40];
 
-	(void) severity;
+	std::string logline;
+	logline.reserve(128);
 
-	// TODO: Portect the actual write with a semaphore?????  I don't think
-	// anyone really does that currently.  We could at least skip it in case the
-	// thing is smaller than the whatever number guaranteed for write().
+	struct timeval tv;
+	if (gettimeofday(&tv, NULL) != 0)
+		throw SyscallException("gettimeofday", errno);
+	struct tm *local = localtime(&tv.tv_sec);
+	auto fractional = int((double(tv.tv_usec) / double(1000000)) * 1000);
+	auto ret = snprintf(timestr, sizeof(timestr),
+		"%04d-%02d-%02d %02d:%02d:%02d.%03d ",
+		local->tm_year + 1900,
+		local->tm_mon + 1,
+		local->tm_mday,
+		local->tm_hour,
+		local->tm_min,
+		local->tm_sec,
+		fractional
+	);
+	if (ret >= 40)
+		throw std::logic_error("unexpected snprintf return value");
 
+	logline.append(timestr);
+
+	switch (severity)
+	{
+		case LS_LOG:
+			logline += "LOG:  ";
+			break;
+		case LS_WARNING:
+			logline += "WARNING:  ";
+			break;
+		case LS_ERROR:
+			logline += "ERROR:  ";
+			break;
+		case LS_FATAL:
+			logline += "FATAL:  ";
+			break;
+		case LS_PANIC:
+			logline += "PANIC:  ";
+			break;
+		default:
+			throw std::logic_error("unexpected log severity");
+	}
+
+	// TODO: handle the case where the buffer isn't large enough.  The case is
+	// unlikely to ever occur, but it's just lazy to not to do this properly.
+	char buf[2048];
 	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	fprintf(stderr, "\n"); // TODO
+
+	logline.append(buf);
+
+	logline += "\n";
+	auto rc = write(fileno(stderr), logline.c_str(), logline.length());
+	// not much we can do if this fails..
+	(void) rc;
 }
 
 void
@@ -587,10 +637,16 @@ int
 BPSGIMainApplication::Run()
 {
 	BlockSignals();
+
+	Log(LS_LOG, "BladePSGI starting up");
+
 	InitializeSelfPipe();
 	InitializeSharedMemory();
 	InitializeMainFastCGISocket();
 	InitializeStatsSocket();
+
+	Log(LS_LOG, "starting up worker processes");
+
 	SpawnWorkersAndAuxiliaryProcesses();
 	SpawnMonitoringProcess();
 	SetSignalHandler(SIGCHLD, overseer_signal_handler);
@@ -600,6 +656,8 @@ BPSGIMainApplication::Run()
 	UnblockSignals();
 
 	SetProcessTitle("overseer");
+
+	Log(LS_LOG, "BladePSGI startup complete");
 
 	for (;;)
 	{
