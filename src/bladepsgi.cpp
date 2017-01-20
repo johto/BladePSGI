@@ -698,15 +698,25 @@ BPSGIMainApplication::Run()
 
 		if (_mainapp_fast_shutdown == 1)
 		{
+			Log(LS_LOG, "received fast shutdown request");
 			KillProcessGroup(SIGQUIT);
 			_mainapp_fast_shutdown = 0;
 		}
 		else if (_mainapp_smart_shutdown == 1)
 		{
-			KillProcessGroup(SIGTERM);
-			_mainapp_smart_shutdown = 0;
-			/* two smart shutdowns means fast shutdown */
-			_mainapp_force_fast_shutdown = 1;
+			if (_mainapp_force_fast_shutdown == 1)
+			{
+				Log(LS_LOG, "received second smart shutdown request; shutting down quickly");
+				KillProcessGroup(SIGQUIT);
+			}
+			else
+			{
+				Log(LS_LOG, "received smart shutdown request");
+				KillProcessGroup(SIGTERM);
+				_mainapp_smart_shutdown = 0;
+				/* two smart shutdowns means fast shutdown */
+				_mainapp_force_fast_shutdown = 1;
+			}
 		}
 
 		int status;
@@ -719,6 +729,7 @@ waitagain:
 				/*
 				 * All child processes have died.  We're finally free.
 				 */
+				Log(LS_LOG, "BladePSGI shutting down");
 				exit(0);
 			}
 			else if (errno != EINTR)
