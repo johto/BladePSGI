@@ -496,7 +496,7 @@ BPSGIMainApplication::SpawnWorkersAndAuxiliaryProcesses()
 	try {
 		main_callback = wrapper_loader_callback->CallAndReceiveCallback();
 	} catch (const PerlInterpreterException &ex) {
-		Log(LS_ERROR, "Could not initialize PSGI callback: %s", ex.strerror());
+		Log(LS_ERROR, "Could not initialize PSGI loader or callback: %s", ex.strerror());
 		_exit(1);
 	}
 
