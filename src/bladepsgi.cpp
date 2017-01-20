@@ -708,6 +708,7 @@ BPSGIMainApplication::Run()
 			{
 				Log(LS_LOG, "received second smart shutdown request; shutting down quickly");
 				KillProcessGroup(SIGQUIT);
+				_mainapp_smart_shutdown = 0;
 			}
 			else
 			{
