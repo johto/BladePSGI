@@ -45,9 +45,89 @@ cmake .
 make
 ```
 
-You should now have a binary called BladePSGI, which you can run normally.
+You should now have a binary called "bladepsgi", which you can run normally.
 
 Loaders
 -------
 
-To be documented.
+The command-line argument --loader can be used to specify a Perl module
+callback which is called once in the spawner process before the backends are
+forked.  The only passed argument is an object which can be used to ask the
+runner for different facilities, documented below.  The loader subroutine
+should return two values: a hashref which will be merged into the PSGI
+environment on every call to the PSGI application, and a subroutine for the
+PSGI application itself.
+
+The passed-in object has the following methods:
+
+##### set\_worker\_status(status)
+
+Expects a single octet as an argument, which will be the new status of the
+current backend process.  This method should only be called from the PSGI
+application, and never from the loader!
+
+##### psgi\_application\_path()
+
+The APPLICATION\_PATH passed to _BladePSGI_ on the command line.  Only useful
+for knowing where to load the application from in the loader subroutine.
+
+##### request\_auxiliary\_process(name, subr)
+
+Requests an auxiliary subprocess with the provided name to be started that
+lives with the application backends.  The process, once started, calls the
+provided subroutine, which should never return.
+
+##### new\_semaphore(name, initvalue)
+
+Requests a new shared semaphore with the provided name and initial value.  The
+return value is an object which provides the following methods:
+
+  tryacquire(): If the current value of the semaphore is larger than zero,
+  decreases the value by one and returns TRUE.  Otherwise returns FALSE.
+
+  release(): Increases the current value of the semaphore by one.
+
+##### new\_atomic\_int64(name, initvalue)
+
+Requests a new shared atomic 64-bit integer with the provided name and initial
+value.  The return value is an object which provides the following methods:
+
+  incr(): Increases the current value by one.
+
+  fetch\_add(val): Increases the current value by _val_ and returns the value
+  before the operation.
+
+  load(): Returns the current value.
+
+  store(val): Stores the provided value into the integer.
+
+Loader example
+--------------
+
+Your final loader code might look something like the following:
+
+```Perl
+package MyBladePSGILoader;
+
+use strict;
+use warnings;
+
+use Plack::Util;
+
+my $loader = sub {
+    my $bladepsgi = shift;
+
+    my $handle = MyAPIHandle->new();
+    $handle->load_configuration_file();
+    my $worker_status_setter = sub {
+        $bladepsgi->set_worker_status($_[0]);
+    };
+    $handle->set_worker_status_setter($worker_status_setter);
+    $handle->set_db_deadlock_counter($bladepsgi->new_atomic_int64('db_deadlock_counter', 0));
+
+    my $env = {
+        'myapix.handle' => $handle,
+    };
+    return $env, Plack::Util::load_psgi($bladepsgi->psgi_application_path());
+};
+```
