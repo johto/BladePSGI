@@ -91,14 +91,14 @@ return value is an object which provides the following methods:
 Requests a new shared atomic 64-bit integer with the provided name and initial
 value.  The return value is an object which provides the following methods:
 
-  incr(): Increases the current value by one.
+  + incr(): Increases the current value by one.
 
-  fetch\_add(val): Increases the current value by _val_ and returns the value
+  + fetch\_add(val): Increases the current value by _val_ and returns the value
   before the operation.
 
-  load(): Returns the current value.
+  + load(): Returns the current value.
 
-  store(val): Stores the provided value into the integer.
+  + store(val): Stores the provided value into the integer.
 
 Loader example
 --------------
