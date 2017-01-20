@@ -769,6 +769,7 @@ print_usage(FILE *fh, const char *argv0)
 	fprintf(fh, "Options\n");
 	fprintf(fh, "  --loader=LOADER              uses the Perl module LOADER as a loader\n");
 	fprintf(fh, "  --proctitle-prefix=PREFIX    sets the prefix used for process titles\n");
+	fprintf(fh, "  --help                       displays this help and exits\n");
 	fprintf(fh, "\n");
 }
 
