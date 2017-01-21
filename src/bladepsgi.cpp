@@ -144,7 +144,7 @@ BPSGIMainApplication::Log(LogSeverity severity, const char *fmt, ...)
 		throw SyscallException("gettimeofday", errno);
 	struct tm *local = localtime(&tv.tv_sec);
 	auto fractional = int((double(tv.tv_usec) / double(1000000)) * 1000);
-	auto ret = snprintf(timestr, sizeof(timestr),
+	int ret = snprintf(timestr, sizeof(timestr),
 		"%04d-%02d-%02d %02d:%02d:%02d.%03d ",
 		local->tm_year + 1900,
 		local->tm_mon + 1,
@@ -154,7 +154,7 @@ BPSGIMainApplication::Log(LogSeverity severity, const char *fmt, ...)
 		local->tm_sec,
 		fractional
 	);
-	if (ret >= 40)
+	if (ret >= (int) sizeof(timestr))
 		throw std::logic_error("unexpected snprintf return value");
 
 	logline.append(timestr);
