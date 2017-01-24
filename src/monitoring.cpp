@@ -49,6 +49,7 @@ BPSGIMonitoring::HandleClient(int listensockfd, std::vector<char> worker_status_
 
 	auto statdata = std::string(worker_status_array.data(), worker_status_array.size()) + "\n";
 	statdata += int64_to_string(shmem->ReadRequestCounter()) + "\n";
+	statdata += "\n";
 	for (auto && sem : shmem->semaphores_)
 		statdata += "sem " + sem->name() + ": " + int64_to_string(sem->Read()) + "\n";
 	for (auto && atm : shmem->atomics_)
