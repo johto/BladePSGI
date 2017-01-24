@@ -564,7 +564,7 @@ BPSGIMainApplication::RunMonitoringProcess()
 		ret = monitoring.Run();
 	} catch (const std::exception &ex) {
 		if (mainapp->SetShouldExitImmediately())
-			mainapp->Log(LS_FATAL, "monitoring process crashed: %s", ex.error());
+			mainapp->Log(LS_FATAL, "monitoring process crashed: %s", ex.what());
 		KillProcessGroup(SIGQUIT);
 		_exit(1);
 	}
