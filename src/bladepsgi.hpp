@@ -286,7 +286,7 @@ public:
 	int Run();
 
 protected:
-	void HandleClient(int listensockfd, std::vector<char> worker_status_array);
+	void HandleClient(int listensockfd, int64_t bladepsgi_start_time, std::vector<char> worker_status_array);
 
 private:
 	BPSGIMainApplication *mainapp_;

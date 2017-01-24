@@ -1,5 +1,7 @@
 #include "bladepsgi.hpp"
 
+#include <ctime>
+
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -29,7 +31,7 @@ BPSGIMonitoring::BPSGIMonitoring(BPSGIMainApplication *mainapp)
 }
 
 void
-BPSGIMonitoring::HandleClient(int listensockfd, std::vector<char> worker_status_array)
+BPSGIMonitoring::HandleClient(int listensockfd, int64_t bladepsgi_start_time, std::vector<char> worker_status_array)
 {
 	struct sockaddr_un their_addr;
 	socklen_t addr_size = sizeof(their_addr);
@@ -47,7 +49,9 @@ BPSGIMonitoring::HandleClient(int listensockfd, std::vector<char> worker_status_
 
 	auto shmem = mainapp_->shmem();
 
-	auto statdata = std::string(worker_status_array.data(), worker_status_array.size()) + "\n";
+	std::string statdata;
+	statdata += int64_to_string(bladepsgi_start_time) + "\n";
+	statdata += std::string(worker_status_array.data(), worker_status_array.size()) + "\n";
 	statdata += int64_to_string(shmem->ReadRequestCounter()) + "\n";
 	statdata += "\n";
 	for (auto && sem : shmem->semaphores_)
@@ -75,6 +79,8 @@ BPSGIMonitoring::Run()
 	int nworkers = mainapp_->nworkers();
 	auto worker_status_data = std::vector<char>(nworkers);
 	auto shmem = mainapp_->shmem();
+
+	time_t bladepsgi_start_time = time(NULL);
 
 	for (;;)
 	{
@@ -106,7 +112,7 @@ BPSGIMonitoring::Run()
 		else if (ret == 1)
 		{
 			shmem->GetAllWorkerStatuses(nworkers, worker_status_data.data());
-			HandleClient(listen_sockfd, worker_status_data);
+			HandleClient(listen_sockfd, (int64_t) bladepsgi_start_time, worker_status_data);
 			continue;
 		}
 		else
