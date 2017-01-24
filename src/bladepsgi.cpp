@@ -105,7 +105,8 @@ BPSGIMainApplication::BPSGIMainApplication(
 	  process_title_prefix_(opt_process_title_prefix),
 	  runner_pid_(-1),
 	  monitoring_process_pid_(-1),
-	  fastcgi_sockfd_(-1)
+	  fastcgi_sockfd_(-1),
+	  stats_sockfd_(-1)
 {
 	runner_pid_ = getpid();
 	signal_mask_stack_.reserve(2);
