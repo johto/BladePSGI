@@ -37,7 +37,7 @@ BPSGIMonitoring::HandleClient(int listensockfd, std::vector<char> worker_status_
 	int clientfd = accept(listensockfd, (struct sockaddr *) &their_addr, &addr_size);
 	if (clientfd == -1)
 	{
-		if (errno == EINTR)
+		if (errno == EINTR || errno == ECONNABORTED)
 		{
 			/* we'll get called again if there's still a client waiting */
 			return;
