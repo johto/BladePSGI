@@ -32,7 +32,7 @@ int
 BPSGIAuxiliaryProcess::Run()
 {
 	mainapp_->SubprocessInit(name_.c_str(), SUBP_DEFAULT_FLAGS);
-	mainapp_->SetSignalHandler(SIGCHLD, SIG_IGN);
+	mainapp_->SetSignalHandler(SIGCHLD, SIG_DFL);
 	mainapp_->SetSignalHandler(SIGINT, SIG_DFL);
 	mainapp_->SetSignalHandler(SIGTERM, SIG_DFL);
 	mainapp_->SetSignalHandler(SIGQUIT, auxiliary_sigquit_handler);
