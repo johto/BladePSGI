@@ -28,11 +28,6 @@ if(NOT PERLCONFIG_USE64BITINT STREQUAL "8")
     message(FATAL_ERROR "Your Perl installation has not been configured with a 64-bit ptrsize")
 endif()
 
-find_library(PERLLIB perl)
-if (PERLLIB STREQUAL "PERLLIB-NOTFOUND")
-    message(FATAL_ERROR "-lperl not found.  Please make sure the development package for libperl has been installed.")
-endif()
-
 add_library(bladepsgi_perl STATIC src/perl/XS.c src/perl/bladepsgi_perl.c src/perl/typemap)
 
 add_custom_command(
