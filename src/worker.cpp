@@ -39,7 +39,6 @@ BPSGIWorker::SetWorkerStatus(char status)
 	mainapp_->SetWorkerStatus(workerno_, status);
 }
 
-#include <sys/socket.h>
 void
 BPSGIWorker::MainLoopIteration(BPSGIPerlCallbackFunction &main_callback)
 {
