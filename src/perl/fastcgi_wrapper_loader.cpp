@@ -65,23 +65,23 @@ sub {
 
 		my $hdrs;
 		my $message = HTTP::Status::status_message($res->[0]);
-		$hdrs = "Status: $res->[0] $message\015\012";
+		$hdrs = "Status: $res->[0] $message\r\n";
 
 		my $headers = $res->[1];
 		while (my ($k, $v) = splice @$headers, 0, 2) {
-			$hdrs .= "$k: $v\015\012";
+			$hdrs .= "$k: $v\r\n";
 		}
-		$hdrs .= "\015\012";
+		$hdrs .= "\r\n";
 
-		print { $stdout } $hdrs;
+		my $write = sub { print { $stdout } $_[0] };
 
-		my $cb = sub { print { $stdout } $_[0] };
+		$write->($hdrs);
 		my $body = $res->[2];
-		if (defined $body) {
-			Plack::Util::foreach($body, $cb);
+		if (defined($body)) {
+			Plack::Util::foreach($body, $write);
 		} else {
 			return Plack::Util::inline_object(
-				write => $cb,
+				write => $write,
 				close => sub { },
 			);
 		}
@@ -96,17 +96,20 @@ sub {
 			%env,
 			%$psgi_env,
 
-			'psgi.version'	  => [1,1],
-			'psgi.url_scheme'   => ($env{HTTPS}||'off') =~ /^(?:on|1)$/i ? 'https' : 'http',
+			'psgi.version'		=> [1,1],
+			'psgi.url_scheme'	=> ($env{HTTPS}||'off') =~ /^(?:on|1)$/i ? 'https' : 'http',
 			'psgi.input'		=> $stdin,
-			# N.B: we intentionally don't use $stderr here
-			'psgi.errors'	   => \*STDERR,
+			# N.B: we intentionally don't use $stderr here, as we want to have
+			# our own log stream instead of sending it to whatever is waiting on
+			# the other side of the FastCGI connection.  This could be
+			# configurable, but I doubt anyone would ever want to turn it off.
+			'psgi.errors'		=> \*STDERR,
 
-			'psgi.multithread'  => Plack::Util::FALSE,
-			'psgi.multiprocess' => Plack::Util::TRUE,
-			'psgi.run_once'	 => Plack::Util::FALSE,
+			'psgi.multithread'	=> Plack::Util::FALSE,
+			'psgi.multiprocess'	=> Plack::Util::TRUE,
+			'psgi.run_once'		=> Plack::Util::FALSE,
 			'psgi.streaming'	=> Plack::Util::TRUE,
-			'psgi.nonblocking'  => Plack::Util::FALSE,
+			'psgi.nonblocking'	=> Plack::Util::FALSE,
 
 			# harakiri not supported for now
 			'psgix.harakiri'	=> Plack::Util::FALSE,
@@ -121,7 +124,7 @@ sub {
 				$handle_response->($_[0]);
 			});
 		} else {
-			die "Bad response $res";
+			die "Bad response ".ref($res);
 		}
 
 		$req->Finish();
