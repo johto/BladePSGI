@@ -31,6 +31,8 @@ extern const char *
 bladepsgi_perl_interpreter_cb_new_semaphore(BPSGI_Context *ctx, BPSGI_Semaphore *sem, const char *name, int value);
 extern const char *
 bladepsgi_perl_interpreter_cb_new_atomic_int64(BPSGI_Context *ctx, BPSGI_AtomicInt64 **atm, const char *name, int value);
+extern void
+bladepsgi_perl_interpreter_cb_sem_acquire(BPSGI_Semaphore *sem);
 extern int
 bladepsgi_perl_interpreter_cb_sem_tryacquire(BPSGI_Semaphore *sem);
 extern void

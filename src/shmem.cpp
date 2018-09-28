@@ -2,56 +2,68 @@
 
 #include <atomic>
 
+// XXX Not sure if anything depends on this anymore..
 static_assert(sizeof(int_fast64_t) == sizeof(int64_t), "sizeof(int_fast64_t) must be sizeof(int64_t)");
-static_assert(sizeof(int_fast8_t) <= sizeof(int64_t), "sizeof(int_fast8_t) must not be larger than sizeof(int64_t)");
-static_assert((alignof(int64_t) % alignof(int_fast8_t)) == 0, "the alignment of int64_t must work for int_fast8_t as well");
 
-
+#define		SHMEM_ALIGNOF 16
+#define		SHMEMALIGN(MEMOFF) (((MEMOFF) % SHMEM_ALIGNOF) == 0 ? (MEMOFF) : ((MEMOFF) + (SHMEM_ALIGNOF - ((MEMOFF) % SHMEM_ALIGNOF))))
 #define		SHMEM_SHOULD_EXIT_IMMEDIATELY_OFF		0
 #define		SHMEM_REQUEST_COUNTER_OFF				SHMEM_SHOULD_EXIT_IMMEDIATELY_OFF + sizeof(int64_t)
-#define		SHMEM_FIRST_USER_AVAILABLE_OFFSET		SHMEM_REQUEST_COUNTER_OFF + sizeof(int64_t)
+
+#define		SHMEM_FIRST_USER_AVAILABLE_OFFSET		SHMEMALIGN(SHMEM_REQUEST_COUNTER_OFF + sizeof(int64_t))
+
+static_assert((SHMEM_FIRST_USER_AVAILABLE_OFFSET % SHMEM_ALIGNOF) == 0, "SHMEM_FIRST_USER_AVAILABLE_OFFSET alignment");
 
 #define		SHMEM_WORKER_STATUS_ARRAY_OFF			2048
 
-BPSGISemaphore::BPSGISemaphore(void *ptr, std::string name, int64_t value)
-	: ptr_((std::atomic<int_fast64_t> *) ptr),
-	  name_(name),
-	  init_value_(value)
+BPSGISemaphore::BPSGISemaphore(sem_t *sem, std::string name)
+	: sem_(sem),
+	  name_(name)
 {
-	std::atomic_store(ptr_, (int_fast64_t) init_value_);
+	// already initialized
 }
 
 int64_t
 BPSGISemaphore::Read()
 {
-	auto val = std::atomic_load(ptr_);
-	if (val <= 0)
-		return 0;
-	else if (val > init_value_)
-		throw std::string("Read saw a value above init value from semaphore " + name_);
-	else
-		return (int64_t) val;
+	int sval;
+	if (sem_getvalue(sem_, &sval) != 0)
+		throw SyscallException("sem_getvalue", errno);
+	return (int64_t) sval;
+}
+
+void
+BPSGISemaphore::Acquire()
+{
+again:
+	if (sem_wait(sem_) != 0)
+	{
+		if (errno == EINTR)
+			goto again;
+		throw SyscallException("sem_wait", errno);
+	}
 }
 
 bool
 BPSGISemaphore::TryAcquire()
 {
-	auto val = std::atomic_fetch_sub(ptr_, (int_fast64_t) 1);
-	if (val > 0)
-		return true;
-	else
+again:
+	if (sem_trywait(sem_) != 0)
 	{
-		Release();
-		return false;
+		if (errno == EINTR)
+			goto again;
+		else if (errno == EAGAIN)
+			return false;
+		throw SyscallException("sem_trywait", errno);
 	}
+	return true;
 }
 
 void
 BPSGISemaphore::Release()
 {
-	auto val = std::atomic_fetch_add(ptr_, (int_fast64_t) 1);
-	if (val >= init_value_)
-		throw std::string("unheld semaphore " + name_ + " released");
+	if (sem_post(sem_) != 0)
+		throw SyscallException("sem_post", errno);
 }
 
 BPSGIAtomicInt64::BPSGIAtomicInt64(void *ptr, std::string name, int64_t value)
@@ -78,13 +90,12 @@ BPSGISharedMemory::LockAllocations()
 void *
 BPSGISharedMemory::AllocateUserShmem(size_t size)
 {
-	Assert(size == sizeof(int_fast64_t));
-
 	if (locked_)
 		throw std::string("could not allocate shared memory: shared memory has been locked");
 
 	char *mem = shared_memory_segment_ + next_user_available_offset_;
-	next_user_available_offset_ += size;
+	next_user_available_offset_ = SHMEMALIGN(next_user_available_offset_ + size);
+
 	if (next_user_available_offset_ >= SHMEM_WORKER_STATUS_ARRAY_OFF)
 		throw std::string("could not allocate shared memory: out of shared memory");
 	return (void *) mem;
@@ -99,8 +110,14 @@ BPSGISharedMemory::NewSemaphore(std::string name, int64_t value)
 			throw std::string("semaphore with name " + name + " already exists");
 	}
 
-	auto ptr = AllocateUserShmem(sizeof(int_fast64_t));
-	semaphores_.push_back(make_unique<BPSGISemaphore>(ptr, name, value));
+	if (value <= 0 || value > 2147483647)
+		throw std::string("semaphore init value is outside of allowed range");
+
+	auto ptr = (sem_t *) AllocateUserShmem(sizeof(sem_t));
+	memset(ptr, 0, sizeof(sem_t));
+	if (sem_init(ptr, 1, (unsigned int) value) != 0)
+		throw SyscallException("sem_init", errno);
+	semaphores_.push_back(make_unique<BPSGISemaphore>(ptr, name));
 	return semaphores_.rbegin()->get();
 }
 

@@ -93,6 +93,12 @@ MODULE = BPSGI PACKAGE=BPSGI::Semaphore PREFIX = bladepsgi_semaphore_
 PROTOTYPES: DISABLE
 
 SV *
+bladepsgi_semaphore_acquire(SEM)
+    BPSGI_Semaphore *SEM
+    CODE:
+        bladepsgi_perl_interpreter_cb_sem_acquire(SEM);
+
+SV *
 bladepsgi_semaphore_tryacquire(SEM)
     BPSGI_Semaphore *SEM
     CODE:

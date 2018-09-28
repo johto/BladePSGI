@@ -100,6 +100,15 @@ bladepsgi_perl_interpreter_cb_new_atomic_int64(BPSGI_Context *ctx, BPSGI_AtomicI
 	return NULL;
 }
 
+void
+bladepsgi_perl_interpreter_cb_sem_acquire(BPSGI_Semaphore *sem)
+{
+	Assert(sem->sem != NULL);
+
+	auto p = (BPSGISemaphore *) sem->sem;
+	p->Acquire();
+}
+
 int
 bladepsgi_perl_interpreter_cb_sem_tryacquire(BPSGI_Semaphore *sem)
 {

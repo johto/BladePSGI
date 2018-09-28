@@ -19,6 +19,7 @@
 #include <vector>
 #include <signal.h>
 #include <string>
+#include <semaphore.h>
 #include <sys/errno.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -64,18 +65,18 @@ private:
 
 class BPSGISemaphore {
 public:
-	BPSGISemaphore(void *ptr, std::string name, int64_t value);
+	BPSGISemaphore(sem_t *sem, std::string name);
 
 	int64_t Read();
+	void Acquire();
 	bool TryAcquire();
 	void Release();
 
 	std::string name() const { return name_; }
 
 private:
-	std::atomic<int_fast64_t> *ptr_;
+	sem_t *sem_;
 	std::string name_;
-	int64_t init_value_;
 };
 
 class BPSGIAtomicInt64 {
