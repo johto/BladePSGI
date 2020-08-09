@@ -29,8 +29,7 @@ between PSGI application backends.
 Requirements
 ------------
 
-The only supported platforms are OS X and Linux.  Windows support seems
-unlikely, but adding support for BSDs should be relatively straightforward.
+The only currently supported platform is Linux.
 
 Building the binary requires cmake version 2.8 or later and a C++11 compatible
 compiler.
