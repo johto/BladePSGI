@@ -23,8 +23,8 @@ client can be used to then expose the application to the internet.
 
 If the PSGI application author chooses they can ask for "auxiliary processes"
 to be started and run with the application, expose the status of each backend
-process in shared memory, or share atomics-based semaphores or atomic integers
-between PSGI application backends.
+process in shared memory, or share semaphores or atomic integers between PSGI
+application backends.
 
 Requirements
 ------------
