@@ -77,6 +77,10 @@ bladepsgi_perl_interpreter_cb_new_semaphore(BPSGI_Context *ctx, BPSGI_Semaphore 
 		sem->sem = (void *) shmem->NewSemaphore(name, value);
 	} catch (const std::string & ex) {
 		return strdup(ex.c_str());
+	} catch (const SyscallException &ex) {
+		char buf[2048];
+		snprintf(buf, sizeof(buf), "system call %s failed: %s", ex.syscall(), ex.strerror());
+		return strdup(buf);
 	}
 	return NULL;
 }
