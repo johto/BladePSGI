@@ -31,8 +31,8 @@ Requirements
 
 The only currently supported platform is Linux.
 
-Building the binary requires cmake version 2.8 or later and a C++11 compatible
-compiler.
+Building the binary requires a somewhat modern version of cmake and a C++11
+compatible compiler.
 
 The Plack::Util, FCGI and HTTP::Status Perl modules should also be available on
 the server(s) that are going to run _BladePSGI_.
